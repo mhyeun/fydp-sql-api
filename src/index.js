@@ -1,12 +1,17 @@
 // Configure express
 const express = require('express')
+const bodyParser = require('body-parser')
+
 const app = express()
 const port = 3000
+
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: false }))
 
 // Configure env variables
 require('dotenv').config()
 
-// Connect to db
+// Db config
 const sql = require('mssql');
 
 const config = {
@@ -23,24 +28,43 @@ const config = {
     }
 }
 
-const connectAndQuery = async () => {
-    try {
-        console.log("Attemping to connect to db...")
-        var poolConnection = await sql.connect(config);
-        console.log("Connected!")         
-        
-        poolConnection.close();
-    } catch (err) {
-        console.error(err.message);
-    }
-}
-
-connectAndQuery()
-
 app.get('/', (req, res) => {
     res.send('Hello World!')
 })
-  
+
+app.get('/get-all', async (req, res) => {
+    const connection = await sql.connect(config)
+    const qResult = await sql.query('SELECT * FROM SensorReadings')
+    connection.close()
+    res.send(qResult)
+})
+
+app.post('/insert', async (req, res) => {
+    const connection = await sql.connect(config)
+
+    const data = req.body.data
+
+    if (data.length < 11) {
+        res.send({
+            result: "failure",
+            data: "Body had less than 11 values."
+        })
+        connection.close()
+    }
+
+    const columns = "DeviceNumber, ReadingTime, AccelerationX, AccelerationY, AccelerationZ, AngVelocityX, AngVelocityY, AngVelocityZ, AngX, AngY, AngZ"
+    const values = `'${data[0]}', '${data[1]}', ${data[2]}, ${data[3]}, ${data[4]}, ${data[5]}, ${data[6]}, ${data[7]}, ${data[8]}, ${data[9]}, ${data[10]}`
+
+    const iResult = await sql.query(`INSERT INTO SensorReadings (${columns}) VALUES (${values})`)
+
+    connection.close()
+    res.send({
+        result: "success",
+        data: iResult
+    })
+})
+
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`)
 })
+

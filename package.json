@@ -1,5 +1,5 @@
 {
-  "name": "postgres-api",
+  "name": "fydp-sql-api",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
